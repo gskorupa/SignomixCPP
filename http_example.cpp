@@ -12,5 +12,11 @@ int main()
     
     auto response = http.send();
 
-    std::cout << "Http POST send with response: " << response << std::endl;
+    std::cout << "Http POST send with response: " << response.code << std::endl;
+    if(response.error)
+    {
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
 }

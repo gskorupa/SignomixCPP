@@ -1,5 +1,6 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
+#include <vector>
 
 namespace signomix
 {
@@ -8,6 +9,14 @@ enum class Method
 {
     POST,
     GET
+};
+
+struct Response
+{
+    bool error;
+    int code;
+    std::string description;
+    std::vector<uint8_t> data;
 };
 
 class HttpConnector
@@ -39,9 +48,9 @@ public:
         fileds_ = fileds;
     }
 
-    std::string send()
+    Response send()
     {
-        std::string response{"Bad request!"};
+        Response response{false, CURLE_OK, "", {}};
         if (not url_.empty() and not fileds_.empty() /* and not method empty */)
         {
             if (curl_)
@@ -55,9 +64,10 @@ public:
          
                 if(response_ != CURLE_OK)
                 {
-                    std::cerr << "[ERROR] : " << curl_easy_strerror(response_) << std::endl;
+                    response.error = true;
+                    response.code = response_;
                 }
-                response = curl_easy_strerror(response_);
+                response.description = curl_easy_strerror(response_);
 
                 /* always cleanup */ 
                 curl_easy_cleanup(curl_);
@@ -65,7 +75,8 @@ public:
             else
             {
                 std::cerr << "[ERROR] Connection lost!" << std::endl;
-                response = "Connection lost!";
+                response.error = true;
+                response.code = CURLE_COULDNT_CONNECT;
             }
         }
 
