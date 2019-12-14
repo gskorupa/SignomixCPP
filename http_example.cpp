@@ -19,6 +19,7 @@ int main()
     std::cout << "Response curl code: " << response.curlCode << std::endl;
     std::cout << "Response curl code description: " << response.description << std::endl;
     std::cout << "Response HTTP code: " << response.httpCode << std::endl;
+
     if(response.error)
     {
         std::cerr << "Exiting with failure." << std::endl;
