@@ -1,34 +1,52 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
+#include <string>
 #include <vector>
+#include <stdio.h>
+#include <string.h>
 
 namespace signomix
 {
 
+constexpr auto __DEFALUT_CODE = 0;
+constexpr auto HTTP_CREATED = 201;
+
+size_t write_data(void *buffer, size_t len, size_t nmemb, void *userp)
+{
+    // to handle data in the future
+
+    (void)len;
+    (void)buffer;
+    (void)userp;
+
+    return nmemb;
+}
+
 enum class Method
 {
     POST,
-    GET
+    GET  // not supported !
 };
 
 struct Response
 {
     bool error;
-    int code;
+    int curlCode;
+    int httpCode;
     std::string description;
     std::vector<uint8_t> data;
 };
 
-class HttpConnector
+class HttpClient
 {
 public:
-    HttpConnector()
+    HttpClient()
     {
         curl_global_init(CURL_GLOBAL_ALL);
         curl_ = curl_easy_init();
     }
 
-    ~HttpConnector()
+    ~HttpClient()
     {
         curl_global_cleanup();
     }
@@ -43,40 +61,93 @@ public:
         method_ = method;
     }
 
-    void setFields(const std::string& fileds)
+    template <typename ValueType>
+    void addField(const std::string& fieldName, const ValueType& value)
     {
-        fileds_ = fileds;
+        fields_ += "&" + fieldName + "=" + std::to_string(value);
+    }
+
+    void setEui(const std::string& eui)
+    {
+        eui_ = "eui=" + eui;
+    }
+
+    void setSecret(const std::string& secret)
+    {
+        secretKey_ = secret;
     }
 
     Response send()
     {
-        Response response{false, CURLE_OK, "", {}};
-        if (not url_.empty() and not fileds_.empty() /* and not method empty */)
+        Response response{false, __DEFALUT_CODE, __DEFALUT_CODE, "", {}};
+
+        if (method_ != Method::POST)
+        {
+            /* for this moment only POST method is supported! */
+            response.error = true;
+            response.curlCode = CURLE_COULDNT_CONNECT;
+            response.description = "Only POST method is supported!";
+            return response;
+        }
+
+        if (not url_.empty()
+            and not fields_.empty()
+            and not secretKey_.empty()
+            and not eui_.empty())
         {
             if (curl_)
             {
                 curl_easy_setopt(curl_, CURLOPT_URL, url_.c_str());
-                /* Now specify the POST data */ 
 
-                curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, fileds_.c_str());
-            
-                response_ = curl_easy_perform(curl_);
-         
-                if(response_ != CURLE_OK)
+                struct curl_slist *headers = NULL;
+                std::string authMess{"Authorization: " + secretKey_};
+
+                /***
+                 * for debbuging purposes */
+                    std::cout << authMess << std::endl;
+                /*
+                ***/
+
+                headers = curl_slist_append(headers, authMess.c_str());
+                headers = curl_slist_append(headers, "Accept: application/x-www-form-urlencoded");
+
+                curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, headers);
+
+                std::string message = eui_ + fields_;
+
+                /***
+                 * for debbuging purposes */
+                    std::cout << message << std::endl;
+                /*
+                ***/
+
+                curl_easy_setopt(curl_, CURLOPT_POST, 1);
+                curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, message.c_str());
+                curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, (long)strlen(message.c_str()));
+
+                curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, write_data);
+
+
+                curlCode_ = curl_easy_perform(curl_);
+
+                // getting HTTP code from response
+                curl_easy_getinfo (curl_, CURLINFO_RESPONSE_CODE, &response.httpCode);
+
+                if(curlCode_ != CURLE_OK or response.httpCode != HTTP_CREATED)
                 {
                     response.error = true;
-                    response.code = response_;
+                    response.curlCode = curlCode_;
                 }
-                response.description = curl_easy_strerror(response_);
+                response.description = curl_easy_strerror(curlCode_);
 
                 /* always cleanup */ 
                 curl_easy_cleanup(curl_);
             }
             else
             {
-                std::cerr << "[ERROR] Connection lost!" << std::endl;
                 response.error = true;
-                response.code = CURLE_COULDNT_CONNECT;
+                response.curlCode = CURLE_COULDNT_CONNECT;
+                response.description = "Connection error!";
             }
         }
 
@@ -85,10 +156,12 @@ public:
 
 private:
     CURL *curl_;
-    CURLcode response_;
+    CURLcode curlCode_;
 
+    std::string eui_;
+    std::string secretKey_;
     std::string url_;
-    std::string fileds_;
+    std::string fields_;
     Method method_;
 };
 
