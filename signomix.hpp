@@ -10,14 +10,33 @@ namespace signomix
 
 constexpr auto __DEFALUT_CODE = 0;
 constexpr auto HTTP_CREATED = 201;
+constexpr auto CURL_NO_ERROR = "No error";
 
-size_t write_data(void *buffer, size_t len, size_t nmemb, void *userp)
+size_t write_func(void *buffer, size_t len, size_t nmemb, void *userp)
 {
     // to handle data in the future
 
     (void)len;
     (void)buffer;
     (void)userp;
+    if (userp == nullptr)
+    {
+        std::cerr << "No data in response" << std::endl;
+    }
+
+    char* smth = static_cast<char*>(userp);
+    for (uint i = 0; i < nmemb; i++)
+    {
+        std::cout << "data: " << smth[i] << ", ";
+    }
+    std::cout << std::endl;
+
+    char* charbuff = static_cast<char*>(buffer);
+    for (uint i =0; i < len; i++)
+    {
+        std::cout << "buffer: " << charbuff[i] << ", ";
+    }
+    std::cout << std::endl;
 
     return nmemb;
 }
@@ -34,7 +53,7 @@ struct Response
     int curlCode;
     int httpCode;
     std::string description;
-    std::vector<uint8_t> data;
+    std::vector<char> data;
 };
 
 class HttpClient
@@ -43,7 +62,6 @@ public:
     HttpClient()
     {
         curl_global_init(CURL_GLOBAL_ALL);
-        curl_ = curl_easy_init();
     }
 
     ~HttpClient()
@@ -97,16 +115,11 @@ public:
         {
             if (curl_)
             {
+                curl_ = curl_easy_init();
                 curl_easy_setopt(curl_, CURLOPT_URL, url_.c_str());
 
                 struct curl_slist *headers = NULL;
                 std::string authMess{"Authorization: " + secretKey_};
-
-                /***
-                 * for debbuging purposes */
-                    std::cout << authMess << std::endl;
-                /*
-                ***/
 
                 headers = curl_slist_append(headers, authMess.c_str());
                 headers = curl_slist_append(headers, "Accept: application/x-www-form-urlencoded");
@@ -115,18 +128,12 @@ public:
 
                 std::string message = eui_ + fields_;
 
-                /***
-                 * for debbuging purposes */
-                    std::cout << message << std::endl;
-                /*
-                ***/
-
                 curl_easy_setopt(curl_, CURLOPT_POST, 1);
                 curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, message.c_str());
                 curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, (long)strlen(message.c_str()));
 
-                curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, write_data);
-
+                curl_easy_setopt(curl_, CURLOPT_WRITEDATA, response.data.data());
+                curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, write_func);
 
                 curlCode_ = curl_easy_perform(curl_);
 
@@ -139,16 +146,27 @@ public:
                     response.curlCode = curlCode_;
                 }
                 response.description = curl_easy_strerror(curlCode_);
-
-                /* always cleanup */ 
+            
+                if (response.error and response.description == CURL_NO_ERROR)
+                {
+                    response.description = "HTTP error " + std::to_string(response.httpCode);
+                }
+            
                 curl_easy_cleanup(curl_);
             }
             else
             {
                 response.error = true;
                 response.curlCode = CURLE_COULDNT_CONNECT;
-                response.description = "Connection error!";
+                response.description = "No connection!";
             }
+        }
+        else
+        {
+            response.error = true;
+            response.curlCode = CURLE_COULDNT_CONNECT;
+            response.description = "Make sure that you set method, eui, secret and fields. " \
+                "These data are necessarily for push a request!";
         }
 
         return response;
