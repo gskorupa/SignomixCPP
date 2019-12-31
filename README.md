@@ -6,11 +6,11 @@ Signomix client C++ library
 ### Installation of libcurl
 The only dependency is libcurl. So you must install it on your device.
 
-For linux
+For Linux
 ```bash
 sudo apt-get install libcurl4-gnutls-dev
 ```
-For windows follow https://curl.haxx.se/windows/
+For Windows follow https://curl.haxx.se/windows/
 
 ### Building and running the example
 ```bash
