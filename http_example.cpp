@@ -7,7 +7,7 @@ int main()
 
     signomix::HttpClient http;
     http.setUrl("https://signomix.com/api/i4t");
-    http.setEui("0000-0000-0000");
+    http.setEui("0000-0000-0000")
     http.setSecret("34d97xxx00112");
     http.addField("led_green", 1);
     http.addField("led_red", 0.0);
