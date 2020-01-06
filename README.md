@@ -39,7 +39,7 @@ if (!response.error)
     std::cout << "Request has been sent!\n";
 }
 ```
-From **Response** type you can get four values: error, data, curlCode and httpCode. In simple case only check if error exists. If no, than request has been succesfully sent. When you set that response give you some data. Thet will be available uder **response.data** variable. Which is representation of std::vecotor<char>. Full usage of response you can see in example. If you want to send another request (POST or GET) just clear fields and you can use your client again!
+From **Response** type you can get four values: error, data, curlCode and httpCode. In simple case only check if error exists. If no, than request has been succesfully sent. When you set that response give you some data. That will be available uder **response.data** variable. Which is representation of std::vecotor<char>. Full usage of response you can see in example. If you want to send another request (POST or GET) just clear fields and you can use your client again!
 ```c++
 client.clearFields();
 ```
