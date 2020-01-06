@@ -34,7 +34,7 @@ After that you can send your POST request.
 ```c++
 signomix::Response response = client.sendPost();
 
-if (!response.error)
+if (response.error)
 {
     std::cout << "Error: " << response.description << std::endl;
 }
