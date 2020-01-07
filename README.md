@@ -18,9 +18,15 @@ make
 ```
 
 ### Usage
-First step is creation of **HttpClient**. You must push to constructor 2 string values. First is your devce EUI number, second is your device secret key. These are values which you set on your account in Signomix platform. So the concept is: one HttpClient for each device.
+First step is creation of **HttpClient**. You must push to constructor two string values. First is your devce EUI number, second is your device secret key. These are values which you set on your account in Signomix platform. So the concept is: one HttpClient for each device. But can change device, also in single client.
 ```c++
 signomix::HttpClient client("device-eui", "device-secret");
+
+client.changeDevice("next-device-eui", "next-device-secret");
+```
+If you are working with your own instance of Signomix on localhost or somewhere else. Use different constructor
+```c++
+signomix::HttpClient client("your-url", "device-eui", "device-secret");
 ```
 The next step is HTTP fields creation. They are different for POST and GET method, just keep it in your mind.
 

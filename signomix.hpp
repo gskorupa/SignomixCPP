@@ -55,9 +55,23 @@ public:
         curl_global_init(CURL_GLOBAL_ALL);
     }
 
+    HttpClient(const std::string& url, const std::string& eui, const std::string& secret)
+        : postUrl_(url)
+        , eui_("eui=" + eui)
+        , secretKey_(secret)
+    {
+        curl_global_init(CURL_GLOBAL_ALL);
+    }
+
     ~HttpClient()
     {
         curl_global_cleanup();
+    }
+
+    void changeDevice(const std::string& eui, const std::string& secret)
+    {
+        eui_ = "eui=" + eui;
+        secretKey_ = secret;
     }
 
     template <typename ValueType>
@@ -129,7 +143,6 @@ public:
             }
 
             curl_easy_cleanup(curl_);
-            clearFields();
         }
         else
         {
