@@ -45,7 +45,7 @@ if (response.error)
     std::cout << "Error: " << response.description << std::endl;
 }
 ```
-From `Response` type you can get values: error, description, data, curlCode and httpCode. In simple case only check if error exists. `response.description` is filled when error appears. If no error, than request has been succesfully sent. When you set that response to provide you some data, they will be available under `response.data` variable. Which is representation of `std::vector<char>`. Full usage of response you can see in example. If you want to send another request (POST or GET) just clear fields and you can use your client again!
+From `Response` type you can get values: error, description, data, curlCode and httpCode. In simple case only check if error exists. `response.description` is filled when error appears. If no error, than request has been succesfully sent. When you set that response to provide you some data, they will be available under `response.data` variable. Which is representation of `std::vector<char>`.  Response is always a string. You can easy get it via `resonse.getString()` function. Full usage of response you can see in example. If you want to send another request (POST or GET) just clear fields and you can use your client again!
 ```c++
 client.clearFields();
 ```

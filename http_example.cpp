@@ -23,10 +23,8 @@ int main()
         return EXIT_FAILURE;
     }
 
-    // response.data usage example
-    // initializing std::string with response.data (std::vector<char>)
-    std::string responseString{response.data.begin(), response.data.end()};
-    if (responseString == "hello!")
+    std::string responseValue = response.getString();
+    if (responseValue == "hello!")
     {
         std::cout << "Led values has been changed!" << std::endl;
     }

@@ -40,6 +40,11 @@ struct Response
     int httpCode;
     std::string description;
     ByteData data;
+
+    std::string getString() const
+    {
+        return std::string{data.begin(), data.end()};
+    }
 };
 
 class HttpClient
