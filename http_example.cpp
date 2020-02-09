@@ -23,6 +23,8 @@ int main()
         return EXIT_FAILURE;
     }
 
+
+	std::cout << "Response string length: " << response.getString().size() << std::endl;
     std::string responseValue = response.getString();
     if (responseValue == "hello!")
     {
@@ -32,3 +34,4 @@ int main()
     std::cout << "SUCCESS !" << std::endl;
     return EXIT_SUCCESS;
 }
+

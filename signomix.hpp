@@ -54,6 +54,7 @@ public:
 
     HttpClient(const std::string& eui, const std::string& secret)
         : postUrl_("https://signomix.com/api/i4t")
+        , getUrl_("https://signomix.com/api/iot/")
         , eui_("eui=" + eui)
         , secretKey_(secret)
     {
@@ -62,6 +63,7 @@ public:
 
     HttpClient(const std::string& url, const std::string& eui, const std::string& secret)
         : postUrl_(url)
+        , getUrl_("https://signomix.com/api/iot/")
         , eui_("eui=" + eui)
         , secretKey_(secret)
     {
@@ -164,6 +166,7 @@ private:
     CURLcode curlCode_;
 
     std::string postUrl_;
+    std::string getUrl_;
     std::string eui_;
     std::string secretKey_;
     std::string fields_;
