@@ -24,7 +24,7 @@ int main()
     }
 
 
-    std::cout << "Data size: " << response.data.size() << std::end; // typo for CI break
+    std::cout << "Data size: " << response.data.size() << std::endl;
     std::cout << "Response string length: " << response.getString().size() << std::endl;
     std::string responseValue = response.getString();
     if (responseValue == "hello!")

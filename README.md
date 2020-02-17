@@ -2,8 +2,6 @@
 Signomix client C++ library for connect your device with https://signomix.com/ via HTTP protocol. The only dependency is libcurl. So you must install it on your device. This is header-only, so just add include it to your project and add **-lcurl** flag to your build system. Library supports POST and GET methods.
 **For that moment only POST is supported!**
 
-[![GithubActionWorkflow](https://github.com/actions/setup-dotnet/workflows/Main%20workflow/badge.svg)](https://github.com/gskorupa/SignomixCPP/actions)
-
 ### Installation of libcurl
 For Linux
 ```bash
