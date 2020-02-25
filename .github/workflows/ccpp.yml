@@ -10,6 +10,6 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: configure
-      run: sudo apt-get install libcurl4-gnutls-dev
+      run: sudo apt-get install libcurl4-gnutls-dev && sudo apt-get install libb64-dev
     - name: make
       run: make
