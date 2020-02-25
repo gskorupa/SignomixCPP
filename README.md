@@ -1,11 +1,12 @@
 # SignomixCPP
-Signomix client C++ library for connect your device with https://signomix.com/ via HTTP protocol. The only dependency is libcurl. So you must install it on your device. This is header-only, so just add include it to your project and add **-lcurl** flag to your build system. Library supports POST and GET methods.
+Signomix client C++ library for connect your device with https://signomix.com/ via HTTP protocol. The only dependency are libcurl and libb64. So you must install it on your device. This is header-only, so just add include it to your project and add **-lcurl** and **-lb64** flag to your build system. Library supports POST and GET methods.
 **For that moment only POST is supported!**
 
-### Installation of libcurl
+### Installation of libcurl and libb64
 For Linux
 ```bash
 sudo apt-get install libcurl4-gnutls-dev
+sudo apt install libb64-dev
 ```
 For Windows follow https://curl.haxx.se/windows/
 
@@ -45,7 +46,7 @@ if (response.error)
 ```
 From `Response` type you can get values: error, description, data, curlCode and httpCode. In simple case only check if error exists. `response.description` is filled when error appears. If no error, than request has been succesfully sent. When you set that response to provide you some data, they will be available under `response.data` variable. Which is representation of `std::vector<char>`.  Response is always a string. You can easy get it via `resonse.getString()` function. Full usage of response you can see in example. If you want to send another request (POST or GET) just clear fields and you can use your client again!
 ```c++
-client.clearFields();
+client.clearRequest();
 ```
 
 #### GET

@@ -1,5 +1,5 @@
 TARGET = signomixcpp
-LIBS = -lcurl
+LIBS = -lcurl -lb64
 CC = g++
 CFLAGS = -g -Wall
 

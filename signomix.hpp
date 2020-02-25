@@ -1,6 +1,8 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 
+#include <b64/encode.h>
+
 #include <string>
 #include <vector>
 
@@ -8,8 +10,10 @@ namespace signomix
 {
 
 constexpr auto __DEFALUT_CODE = 0;
+constexpr auto HTTP_OK = 200;
 constexpr auto HTTP_CREATED = 201;
 constexpr auto CURL_NO_ERROR = "No error";
+constexpr auto POST_AUTH_URL = "https://signomix.com/api/auth";
 
 using ByteData = std::vector<char>;
 
@@ -87,7 +91,7 @@ public:
         fields_ += "&" + fieldName + "=" + std::to_string(value);
     }
 
-    void clearFields()
+    void clearRequest()
     {
         fields_.clear();
     }
@@ -150,6 +154,7 @@ public:
             }
 
             curl_easy_cleanup(curl_);
+            curl_slist_free_all(headers);
         }
         else
         {
@@ -161,8 +166,102 @@ public:
         return response;
     }
 
+    Response sendGet()
+    {
+        Response response{false, __DEFALUT_CODE, __DEFALUT_CODE, "", {}};
+
+        if (fields_.empty())
+        {
+            response.error = true;
+            response.curlCode = CURLE_COULDNT_CONNECT;
+            response.description = "Empty fileds! GET request has not been sent.";
+            return response;
+        }
+
+        if (curl_)
+        {
+            curl_ = curl_easy_init();
+            curl_easy_setopt(curl_, CURLOPT_URL, getUrl_.c_str());
+
+            // GET Request
+
+            curl_easy_cleanup(curl_);
+        }
+    }
+
+    std::string startSession(const std::string& login, const std::string& password)
+    {
+        std::string credentials{login + ":" + password + "\n"};
+
+        constexpr int max_len{100};
+        base64::encoder encoder;
+        char encoded[max_len];
+
+        encoder.encode(credentials.c_str(), credentials.size(), encoded);
+        std::string encodedCredentials{encoded};
+
+        return getSessionToken(encodedCredentials);
+    }
+
 private:
-    CURL *curl_;
+    std::string getSessionToken(const std::string& encodedCredentials)
+    {
+        std::string token{};
+        
+        Response response{false, __DEFALUT_CODE, __DEFALUT_CODE, "", {}};
+
+        if (curl_)
+        {
+            curl_ = curl_easy_init();
+            curl_easy_setopt(curl_, CURLOPT_URL, POST_AUTH_URL);
+
+            struct curl_slist *headers = NULL;
+            std::string authMess{"Authentication: Basic " + encodedCredentials};
+
+            headers = curl_slist_append(headers, authMess.c_str());
+            headers = curl_slist_append(headers, "Accept: text/plain");
+            curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, headers);
+
+            // ***** DATA TO CALLBACK ********
+            curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &response.data);
+            curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, writeCallback);
+
+            curl_easy_setopt(curl_, CURLOPT_POST, 1);
+            curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, "");
+            curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, static_cast<long>(0));
+
+            curlCode_ = curl_easy_perform(curl_);
+
+            curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &response.httpCode);
+            if(curlCode_ != CURLE_OK or response.httpCode != HTTP_OK)
+            {
+                response.error = true;
+                response.curlCode = curlCode_;
+            }
+            response.description = curl_easy_strerror(curlCode_);
+        
+            if (response.error and response.description == CURL_NO_ERROR)
+            {
+                response.description = "HTTP error " + std::to_string(response.httpCode);
+            }
+
+            if (response.error)
+            {
+                token = "[ERROR] " + response.description;
+            }
+            else
+            {
+                token = response.getString();
+            }
+
+            curl_easy_cleanup(curl_);
+            curl_slist_free_all(headers);
+        }
+
+        return token;
+    }
+
+    CURL* curl_;
     CURLcode curlCode_;
 
     std::string postUrl_;
