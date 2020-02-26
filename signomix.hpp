@@ -68,20 +68,18 @@ class HttpClient
 public:
     HttpClient() = delete;
 
-    HttpClient(const std::string& deviceName, const std::string& eui, const std::string& secret)
+    HttpClient(const std::string& eui, const std::string& secret)
         : postUrl_("https://signomix.com/api/i4t")
-        , getUrl_("https://signomix.com/api/iot/")
-        , deviceName_(deviceName + "/")
+        , getUrl_("https://signomix.com/api/iot/device/")
         , eui_("eui=" + eui)
         , secretKey_(secret)
     {
         curl_global_init(CURL_GLOBAL_ALL);
     }
 
-    HttpClient(const std::string& postUrl, const std::string& getUrl, const std::string& deviceName, const std::string& eui, const std::string& secret)
+    HttpClient(const std::string& postUrl, const std::string& getUrl, const std::string& eui, const std::string& secret)
         : postUrl_(postUrl)
         , getUrl_(getUrl)
-        , deviceName_(deviceName + "/")
         , eui_("eui=" + eui)
         , secretKey_(secret)
     {
@@ -93,15 +91,14 @@ public:
         curl_global_cleanup();
     }
 
-    void changeDevice(const std::string& deviceName, const std::string& eui, const std::string& secret)
+    void changeDevice(const std::string& eui, const std::string& secret)
     {
-        deviceName_ = deviceName + "/";
         eui_ = "eui=" + eui;
         secretKey_ = secret;
     }
 
     template <typename ValueType>
-    void addField(const std::string& fieldName, const ValueType& value)
+    void addPostField(const std::string& fieldName, const ValueType& value)
     {
         fields_ += "&" + fieldName + "=" + std::to_string(value);
     }
@@ -109,7 +106,7 @@ public:
     void addGetFields(const std::string& fields)
     {
         fields_.clear();
-        fields_ += fields + "?query=last";
+        fields_ += fields + "?query=last%20";
     }
 
     void clearRequest()
@@ -198,7 +195,8 @@ public:
         {
             curl_ = curl_easy_init();
 
-            std::string getUrlWithFields{getUrl_ + deviceName_ + fields_};
+            int howManyQueries = 1;
+            std::string getUrlWithFields{getUrl_ + "0000-0000-0000/" + fields_ + std::to_string(howManyQueries)};
             curl_easy_setopt(curl_, CURLOPT_URL, getUrlWithFields.c_str());
             std::cout << getUrlWithFields << std::endl;
 
@@ -320,7 +318,6 @@ private:
 
     std::string postUrl_;
     std::string getUrl_;
-    std::string deviceName_;
     std::string eui_;
     std::string secretKey_;
     std::string fields_;

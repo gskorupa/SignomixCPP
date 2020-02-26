@@ -5,7 +5,7 @@
 int main()
 {
 
-    signomix::HttpClient ledClient("device0", "0000-0000-0000", "34d97xxx00112");
+    signomix::HttpClient ledClient("0000-0000-0000", "34d97xxx00112");
 
     /* POST REQUEST */
 
