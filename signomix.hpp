@@ -3,18 +3,25 @@
 
 #include <b64/encode.h>
 
+#include <algorithm>
 #include <string>
 #include <vector>
-#include <tuple>
 
 namespace signomix
 {
 
-constexpr auto __DEFALUT_CODE = 0;
+namespace
+{
+constexpr auto _EMPTY = 0;
+constexpr auto _DEFALUT_CODE = 0;
+constexpr auto _POST_AUTH_URL = "https://signomix.com/api/auth/";
+constexpr auto _RECONNECT_LIMIT = 3;
+}
+
+constexpr auto CURL_NO_ERROR = "No error";
 constexpr auto HTTP_OK = 200;
 constexpr auto HTTP_CREATED = 201;
-constexpr auto CURL_NO_ERROR = "No error";
-constexpr auto POST_AUTH_URL = "https://signomix.com/api/auth/";
+constexpr auto HTTP_UNAUTHORIZED = 403;
 
 using ByteData = std::vector<char>;
 
@@ -23,35 +30,29 @@ size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp)
     size_t realsize = size * nmemb;
     if (not contents or not userp)
     {
-        std::cerr << "No data in response\n";
+        return 0;
     }
 
-    ByteData* data = static_cast<ByteData*>(userp);
+    std::string* data = static_cast<std::string*>(userp);
     data->clear();
 
     char* bytes = static_cast<char*>(contents);
-    for (size_t i = 0; i < realsize; i++)
-    {
-        data->push_back(bytes[i]);
-    }
+    std::string output{bytes};
+
+    *data = output;
 
     return realsize;
 }
 
-struct Response
+struct HttpResponse
 {
     bool error;
     int curlCode;
     int httpCode;
     std::string description;
-    ByteData data;
+    std::string data;
 
-    std::string getString() const
-    {
-        return std::string{data.begin(), data.end()};
-    }
-
-    Response& operator=(Response& other)
+    HttpResponse& operator=(const HttpResponse& other)
     {
         error = other.error;
         curlCode = other.curlCode;
@@ -66,21 +67,43 @@ struct Response
 class HttpClient
 {
 public:
+    /*
+     * Default non-argument constructor has been deleted.
+     * For proper usage please use one of two defined constructors.
+     */
     HttpClient() = delete;
 
-    HttpClient(const std::string& eui, const std::string& secret)
-        : postUrl_("https://signomix.com/api/i4t")
+    /*
+     * This is a standard constructor.
+     * Conventoion is a one HttpClient per device, so you must pass your account and device credentials into it.
+     * Of course you can simple switch accounts and devices inside object.
+     * If you want do this, use functions like changeAccount() or change Device()
+     */
+    HttpClient(const std::string& login, const std::string& password,
+               const std::string& eui, const std::string& secret)
+        : login_(login)
+        , password_(password)
+        , postUrl_("https://signomix.com/api/i4t")
         , getUrl_("https://signomix.com/api/iot/device/")
-        , eui_("eui=" + eui)
+        , eui_(eui)
         , secretKey_(secret)
     {
         curl_global_init(CURL_GLOBAL_ALL);
     }
 
-    HttpClient(const std::string& postUrl, const std::string& getUrl, const std::string& eui, const std::string& secret)
-        : postUrl_(postUrl)
+    /*
+     * This is a non-standard constructor.
+     * If you have your own instance of Signomix server with different endpoints.
+     * than you should use this constructor
+     */
+    HttpClient(const std::string& login, const std::string& password,
+               const std::string& postUrl, const std::string& getUrl,
+               const std::string& eui, const std::string& secret)
+        : login_(login)
+        , password_(password)
+        , postUrl_(postUrl)
         , getUrl_(getUrl)
-        , eui_("eui=" + eui)
+        , eui_(eui)
         , secretKey_(secret)
     {
         curl_global_init(CURL_GLOBAL_ALL);
@@ -91,9 +114,15 @@ public:
         curl_global_cleanup();
     }
 
+    void changeAccount(const std::string& login, const std::string& password)
+    {
+        login_ = login;
+        password_ = password;
+    }
+
     void changeDevice(const std::string& eui, const std::string& secret)
     {
-        eui_ = "eui=" + eui;
+        eui_ = eui;
         secretKey_ = secret;
     }
 
@@ -112,17 +141,15 @@ public:
     void clearRequest()
     {
         fields_.clear();
+        faliedAuthCounter = 0;
     }
 
-    Response sendPost()
+    HttpResponse sendPost()
     {
-        Response response{false, __DEFALUT_CODE, __DEFALUT_CODE, "", {}};
+        HttpResponse response{false, _DEFALUT_CODE, _DEFALUT_CODE, "", {}};
 
-        if (fields_.empty())
+        if (not checkFields(response))
         {
-            response.error = true;
-            response.curlCode = CURLE_COULDNT_CONNECT;
-            response.description = "Empty fileds! POST request has not been sent.";
             return response;
         }
 
@@ -139,32 +166,17 @@ public:
 
             curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, headers);
 
-            std::string message = eui_ + fields_;
+            std::string message = "eui=" + eui_ + fields_;
 
             curl_easy_setopt(curl_, CURLOPT_POST, 1);
             curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, message.c_str());
             curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, static_cast<long>(message.size()));
 
-            // ***** DATA TO CALLBACK ********
-            curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &response.data);
-            curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, writeCallback);
+            setCallback(response);
 
             curlCode_ = curl_easy_perform(curl_);
 
-            // getting HTTP code from response
-            curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &response.httpCode);
-
-            if(curlCode_ != CURLE_OK or response.httpCode != HTTP_CREATED)
-            {
-                response.error = true;
-                response.curlCode = curlCode_;
-            }
-            response.description = curl_easy_strerror(curlCode_);
-        
-            if (response.error and response.description == CURL_NO_ERROR)
-            {
-                response.description = "HTTP error " + std::to_string(response.httpCode);
-            }
+            responseFillAndExpectHttpCode(response, HTTP_CREATED);
 
             curl_easy_cleanup(curl_);
             curl_slist_free_all(headers);
@@ -179,15 +191,12 @@ public:
         return response;
     }
 
-    Response sendGet(const std::string& sessionToken)
+    HttpResponse sendGet(int recordsNumber)
     {
-        Response response{false, __DEFALUT_CODE, __DEFALUT_CODE, "", {}};
+        HttpResponse response{false, _DEFALUT_CODE, _DEFALUT_CODE, "", {}};
 
-        if (fields_.empty())
+        if (not checkFields(response))
         {
-            response.error = true;
-            response.curlCode = CURLE_COULDNT_CONNECT;
-            response.description = "Empty fileds! GET request has not been sent.";
             return response;
         }
 
@@ -195,38 +204,21 @@ public:
         {
             curl_ = curl_easy_init();
 
-            int howManyQueries = 1;
-            std::string getUrlWithFields{getUrl_ + "0000-0000-0000/" + fields_ + std::to_string(howManyQueries)};
+            std::string getUrlWithFields{getUrl_ + eui_ + '/' + fields_ + std::to_string(recordsNumber)};
             curl_easy_setopt(curl_, CURLOPT_URL, getUrlWithFields.c_str());
-            std::cout << getUrlWithFields << std::endl;
 
             struct curl_slist *headers = NULL;
-            std::string authMess{"Authentication: " + sessionToken};
+            std::string authMess{"Authentication: " + sessionToken_};
 
             headers = curl_slist_append(headers, authMess.c_str());
             headers = curl_slist_append(headers, "Accept: application/json");
             curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, headers);
 
-            // ***** DATA TO CALLBACK ********
-            curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &response.data);
-            curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, writeCallback);
+            setCallback(response);
 
             curlCode_ = curl_easy_perform(curl_);
 
-            // getting HTTP code from response
-            curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &response.httpCode);
-
-            if(curlCode_ != CURLE_OK or response.httpCode != HTTP_OK)
-            {
-                response.error = true;
-                response.curlCode = curlCode_;
-            }
-            response.description = curl_easy_strerror(curlCode_);
-        
-            if (response.error and response.description == CURL_NO_ERROR)
-            {
-                response.description = "HTTP error " + std::to_string(response.httpCode);
-            }
+            responseFillAndExpectHttpCode(response, HTTP_OK);
 
             curl_easy_cleanup(curl_);
             curl_slist_free_all(headers);
@@ -238,12 +230,29 @@ public:
             response.description = "No connection!";
         }
 
+        if (response.httpCode == HTTP_UNAUTHORIZED)
+        {
+            // Session token is expired. Trying to renew access token.
+            createSession();
+            if (faliedAuthCounter++ < _RECONNECT_LIMIT)
+            {
+                // Resending actual GET request with new token
+                return sendGet(recordsNumber);
+            }
+            else
+            {
+                // Reconnection limit has been exceeded. Probably bad account credentials was given.
+                return response;
+            }
+        }
+
+        faliedAuthCounter = 0;
         return response;
     }
 
-    std::string startSession(const std::string& login, const std::string& password)
+    bool createSession()
     {
-        std::string credentials{login + ":" + password + "\n"};
+        std::string credentials{login_ + ":" + password_ + "\n"};
 
         constexpr int max_len{100};
         base64::encoder encoder;
@@ -252,20 +261,24 @@ public:
         encoder.encode(credentials.c_str(), credentials.size(), encoded);
         std::string encodedCredentials{encoded};
 
-        return getSessionToken(encodedCredentials);
-    }
+        auto response = getSessionToken(encodedCredentials);
+        if (response.error)
+        {
+            return false;
+        }
 
+        sessionToken_ = response.data;
+        return true;
+    }
 private:
-    std::string getSessionToken(const std::string& encodedCredentials)
+    HttpResponse getSessionToken(const std::string& encodedCredentials)
     {
-        std::string token{};
-        
-        Response response{false, __DEFALUT_CODE, __DEFALUT_CODE, "", {}};
+        HttpResponse response{false, _DEFALUT_CODE, _DEFALUT_CODE, "", {}};
 
         if (curl_)
         {
             curl_ = curl_easy_init();
-            curl_easy_setopt(curl_, CURLOPT_URL, POST_AUTH_URL);
+            curl_easy_setopt(curl_, CURLOPT_URL, _POST_AUTH_URL);
 
             struct curl_slist *headers = NULL;
             std::string authMess{"Authentication: Basic " + encodedCredentials};
@@ -274,53 +287,77 @@ private:
             headers = curl_slist_append(headers, "Accept: text/plain");
             curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, headers);
 
-            // ***** DATA TO CALLBACK ********
-            curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &response.data);
-            curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, writeCallback);
+            setCallback(response);
 
+            // Setting empty POST fields for authentication
             curl_easy_setopt(curl_, CURLOPT_POST, 1);
             curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, "");
-            curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, static_cast<long>(0));
+            curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, static_cast<long>(_EMPTY));
 
             curlCode_ = curl_easy_perform(curl_);
 
-            curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &response.httpCode);
-            if(curlCode_ != CURLE_OK or response.httpCode != HTTP_OK)
-            {
-                response.error = true;
-                response.curlCode = curlCode_;
-            }
-            response.description = curl_easy_strerror(curlCode_);
-        
-            if (response.error and response.description == CURL_NO_ERROR)
-            {
-                response.description = "HTTP error " + std::to_string(response.httpCode);
-            }
-
-            if (response.error)
-            {
-                token = "[ERROR] " + response.description;
-            }
-            else
-            {
-                token = response.getString();
-            }
+            responseFillAndExpectHttpCode(response, HTTP_OK);
 
             curl_easy_cleanup(curl_);
             curl_slist_free_all(headers);
         }
 
-        return token;
+        return response;
     }
+
+    void setCallback(HttpResponse& response)
+    {
+        curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &response.data);
+        curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, writeCallback);
+    }
+
+    bool checkFields(HttpResponse& response)
+    {
+        if (fields_.empty())
+        {
+            response.error = true;
+            response.curlCode = CURLE_COULDNT_CONNECT;
+            response.description = "Empty fileds! GET request has not been sent.";
+            return false;
+        }
+
+        return true;
+    }
+
+    void responseFillAndExpectHttpCode(HttpResponse& response, int expextedHttpCode)
+    {
+        curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &response.httpCode);
+
+        if(curlCode_ != CURLE_OK or response.httpCode != expextedHttpCode)
+        {
+            response.error = true;
+            response.curlCode = curlCode_;
+        }
+        response.description = curl_easy_strerror(curlCode_);
+    
+        if (response.error and response.description == CURL_NO_ERROR)
+        {
+            response.description = "HTTP error " + std::to_string(response.httpCode);
+        }
+    }
+
+    /*
+     * Private members
+     */
 
     CURL* curl_;
     CURLcode curlCode_;
 
+    std::string login_;
+    std::string password_;
     std::string postUrl_;
     std::string getUrl_;
     std::string eui_;
     std::string secretKey_;
     std::string fields_;
+    std::string sessionToken_;
+
+    int faliedAuthCounter{0};
 };
 
 } // namespace signomix

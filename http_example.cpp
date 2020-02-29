@@ -5,57 +5,61 @@
 int main()
 {
 
-    signomix::HttpClient ledClient("0000-0000-0000", "34d97xxx00112");
+    signomix::HttpClient ledClient("signomixcpp-test", "Test0000!", "0000-0000-0000", "34d97xxx00112");
 
-    /* POST REQUEST */
+    bool isSessionCreated = ledClient.createSession();
+    std::cout << std::boolalpha << "Starting session = " << isSessionCreated << std::endl;
 
-    // std::cout << "Sending HTTP request POST" << std::endl;
+    // /* POST REQUEST */
 
-    // ledClient.addField("led_green", 1);
-    // ledClient.addField("led_red", 0.0);
-    // ledClient.addField("led_yellow", 1.0);
+    std::cout << "Sending HTTP request POST" << std::endl;
 
-    // auto response = ledClient.sendPost();
-    // // TODO: Correctly clean curl object - second request always not working
+    ledClient.addPostField("led_green", 1);
+    ledClient.addPostField("led_red", 0.0);
+    ledClient.addPostField("led_yellow", 1.0);
 
-    // std::cout << "Response curl code: " << response.curlCode << std::endl;
-    // std::cout << "Response curl code description: " << response.description << std::endl;
-    // std::cout << "Response HTTP code: " << response.httpCode << std::endl;
+    auto response = ledClient.sendPost();
 
-    // if(response.error)
-    // {
-    //     std::cerr << "Exiting with failure." << std::endl;
-    //     return EXIT_FAILURE;
-    // }
+    std::cout << "Response curl code: " << response.curlCode << std::endl;
+    std::cout << "Response curl code description: " << response.description << std::endl;
+    std::cout << "Response HTTP code: " << response.httpCode << std::endl;
 
-    // std::cout << "Data size: " << response.data.size() << std::endl;
-    // std::string responseValue = response.getString();
-    // std::cout << "Response string length: " << responseValue.size() << std::endl;
-    // std::cout << responseValue << std::endl;
+    std::cout << "Data size: " << response.data.size() << std::endl;
+    std::string responsePostValue = response.data;
+    std::cout << "Response string length: " << responsePostValue.size() << std::endl;
+    std::cout << responsePostValue << std::endl;
 
-    // std::cout << "POST Success!" << std::endl;
+    if(response.error)
+    {
+        std::cerr << "Exiting with failure." << std::endl;
+        return EXIT_FAILURE;
+    }
 
-    // ledClient.clearRequest();
+    std::cout << "\nPOST Success!\n" << std::endl;
+
+    ledClient.clearRequest();
 
     /* GET REQUEST */
 
     std::cout << "Sending HTTP request GET" << std::endl;
 
-    std::cout << "Starting session with token = ";
-    std::string token = ledClient.startSession("signomixcpp-test", "Test0000!");
-    std::cout << token << std::endl;
-
     ledClient.addGetFields("led_green,led_red,led_yellow");
 
-    auto response = ledClient.sendGet(token);
+    response = ledClient.sendGet(1);
 
     std::cout << "Response curl code: " << response.curlCode << std::endl;
     std::cout << "Response curl code description: " << response.description << std::endl;
     std::cout << "Response HTTP code: " << response.httpCode << std::endl;
     std::cout << "Data size: " << response.data.size() << std::endl;
-    std::string responseValue = response.getString();
-    std::cout << responseValue << std::endl;
+    std::string responseGetValue = response.data;
+    std::cout << responseGetValue << std::endl;
 
+    if(response.error)
+    {
+        std::cerr << "Exiting with failure." << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    std::cout << "\nGET Success!" << std::endl;
     return EXIT_SUCCESS;
 }
-

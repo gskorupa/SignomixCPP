@@ -1,4 +1,4 @@
-TARGET = signomixcpp
+TARGET = example
 LIBS = -lcurl -lb64
 CC = g++
 CFLAGS = -g -Wall
