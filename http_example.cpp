@@ -16,7 +16,7 @@ int main()
         return EXIT_FAILURE;
     }
 
-    // /* SENDING DATA */
+    /* SENDING DATA */
 
     std::cout << "Sending data via HTTP request POST" << std::endl;
 
