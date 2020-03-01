@@ -27,9 +27,8 @@ int main()
 
     auto response = ledClient.sendData();
 
-    std::cout << "Response curl code: " << response.curlCode << std::endl;
-    std::cout << "Response curl code description: " << response.description << std::endl;
     std::cout << "Response HTTP code: " << response.httpCode << std::endl;
+    std::cout << "Response description: " << response.description << std::endl;
 
     std::string responseString = response.data;
     std::cout << responseString << std::endl;
@@ -49,9 +48,8 @@ int main()
     ledClient.newRequest();
     response = ledClient.getData("led_green,led_red,led_yellow");
 
-    std::cout << "Response curl code: " << response.curlCode << std::endl;
-    std::cout << "Response curl code description: " << response.description << std::endl;
     std::cout << "Response HTTP code: " << response.httpCode << std::endl;
+    std::cout << "Response curl code description: " << response.description << std::endl;
     responseString = response.data;
     std::cout << responseString << std::endl;
 
