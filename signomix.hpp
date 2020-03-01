@@ -1,11 +1,11 @@
+#pragma once
+
+#include <b64/encode.h>
 #include <curl/curl.h>
 #include <curl/easy.h>
 
-#include <b64/encode.h>
-
 #include <algorithm>
 #include <string>
-#include <vector>
 
 namespace signomix
 {
@@ -163,7 +163,7 @@ public:
      * So this should be a primitive type.
      */
     template <typename ValueType>
-    void addPostField(const std::string& fieldName, const ValueType& value)
+    void addDataField(const std::string& fieldName, const ValueType& value)
     {
         fields_ += "&" + fieldName + "=" + std::to_string(value);
     }
