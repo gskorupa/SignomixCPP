@@ -4,7 +4,6 @@
 
 int main()
 {
-
     signomix::HttpClient ledClient("signomixcpp-test", "Test0000!", "0000-0000-0000", "34d97xxx00112");
 
     bool isSessionCreated = ledClient.createSession();
