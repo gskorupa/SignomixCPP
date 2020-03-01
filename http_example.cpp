@@ -10,24 +10,29 @@ int main()
     bool isSessionCreated = ledClient.createSession();
     std::cout << std::boolalpha << "Starting session = " << isSessionCreated << std::endl;
 
-    // /* POST REQUEST */
+    if (not isSessionCreated)
+    {
+        std::cerr << "Exiting with failure." << std::endl;
+        return EXIT_FAILURE;
+    }
 
-    std::cout << "Sending HTTP request POST" << std::endl;
+    // /* SENDING DATA */
 
-    ledClient.addPostField("led_green", 1);
-    ledClient.addPostField("led_red", 0.0);
-    ledClient.addPostField("led_yellow", 1.0);
+    std::cout << "Sending data via HTTP request POST" << std::endl;
 
-    auto response = ledClient.sendPost();
+    ledClient.newRequest();
+    ledClient.addPostField("led_green", 0.0);
+    ledClient.addPostField("led_red", 1);
+    ledClient.addPostField("led_yellow", 0.0f);
+
+    auto response = ledClient.sendData();
 
     std::cout << "Response curl code: " << response.curlCode << std::endl;
     std::cout << "Response curl code description: " << response.description << std::endl;
     std::cout << "Response HTTP code: " << response.httpCode << std::endl;
 
-    std::cout << "Data size: " << response.data.size() << std::endl;
-    std::string responsePostValue = response.data;
-    std::cout << "Response string length: " << responsePostValue.size() << std::endl;
-    std::cout << responsePostValue << std::endl;
+    std::string responseString = response.data;
+    std::cout << responseString << std::endl;
 
     if(response.error)
     {
@@ -35,24 +40,20 @@ int main()
         return EXIT_FAILURE;
     }
 
-    std::cout << "\nPOST Success!\n" << std::endl;
-
-    ledClient.clearRequest();
+    std::cout << "\nSending data success!\n" << std::endl;
 
     /* GET REQUEST */
 
     std::cout << "Sending HTTP request GET" << std::endl;
 
-    ledClient.addGetFields("led_green,led_red,led_yellow");
-
-    response = ledClient.sendGet();
+    ledClient.newRequest();
+    response = ledClient.getData("led_green,led_red,led_yellow");
 
     std::cout << "Response curl code: " << response.curlCode << std::endl;
     std::cout << "Response curl code description: " << response.description << std::endl;
     std::cout << "Response HTTP code: " << response.httpCode << std::endl;
-    std::cout << "Data size: " << response.data.size() << std::endl;
-    std::string responseGetValue = response.data;
-    std::cout << responseGetValue << std::endl;
+    responseString = response.data;
+    std::cout << responseString << std::endl;
 
     if(response.error)
     {
@@ -60,6 +61,6 @@ int main()
         return EXIT_FAILURE;
     }
 
-    std::cout << "\nGET Success!" << std::endl;
+    std::cout << "\nGetting data success!" << std::endl;
     return EXIT_SUCCESS;
 }

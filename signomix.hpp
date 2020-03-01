@@ -150,6 +150,15 @@ public:
     }
 
     /*
+     * IMPORTANT: Use this function before each single request you send.
+     */
+    void newRequest()
+    {
+        fields_.clear();
+        faliedAuthCounter = 0;
+    }
+
+    /*
      * Adding a simngle POST field. As value you should treat every type which can be put into std::to_string function.
      * So this should be a primitive type.
      */
@@ -160,34 +169,15 @@ public:
     }
 
     /*
-     * Adding a GET fields. Put fileds as one string with fileds separeted with comas. No whitespaces!
-     * example: addGetFields("temperature,humidity")
-     */
-    void addGetFields(const std::string& fields)
-    {
-        fields_.clear();
-        fields_ += fields + "?query=last%20";
-    }
-
-    /*
-     * IMPORTANT: Use this function after each single request you send.
-     */
-    void clearRequest()
-    {
-        fields_.clear();
-        faliedAuthCounter = 0;
-    }
-
-    /*
      * Function for sending POST request to update or create your device data on Signomix platform.
      * 
      * IMPORTANT: Remeber that post fields must be filled before.
      */
-    HttpResponse sendPost()
+    HttpResponse sendData()
     {
         HttpResponse response{false, _DEFALUT_CODE, _DEFALUT_CODE, "", {}};
 
-        if (not checkFields(response))
+        if (not checkFields(fields_, response))
         {
             return response;
         }
@@ -230,19 +220,20 @@ public:
         return response;
     }
 
-
     /*
      * Function for sending GET request to get your device data from Signomix platform.
-     * If you are interested in more number of last records of data, put number as a function parameter.
+     * To first parameter put fileds as one string with fileds separeted with comas. No whitespaces!
+     * example: addGetFields("temperature,humidity")
+     * If you are interested in more number of last records of data, put number as a second function parameter.
      * It is 1 by default.
-     * 
+     *
      * IMPORTANT: Remeber that get fields must be filled before.
      */
-    HttpResponse sendGet(int recordsNumber = 1)
+    HttpResponse getData(const std::string& fields, int recordsNumber = 1)
     {
         HttpResponse response{false, _DEFALUT_CODE, _DEFALUT_CODE, "", {}};
 
-        if (not checkFields(response))
+        if (not checkFields(fields, response))
         {
             return response;
         }
@@ -251,7 +242,7 @@ public:
         {
             curl_ = curl_easy_init();
 
-            std::string getUrlWithFields{getUrl_ + eui_ + '/' + fields_ + std::to_string(recordsNumber)};
+            std::string getUrlWithFields{getUrl_ + eui_ + '/' + fields + "?query=last%20" + std::to_string(recordsNumber)};
             curl_easy_setopt(curl_, CURLOPT_URL, getUrlWithFields.c_str());
 
             struct curl_slist *headers = NULL;
@@ -284,7 +275,7 @@ public:
             if (faliedAuthCounter++ < _RECONNECT_LIMIT)
             {
                 // Resending actual GET request with new token
-                return sendGet(recordsNumber);
+                return getData(fields, recordsNumber);
             }
             else
             {
@@ -338,9 +329,9 @@ private:
         curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, writeCallback);
     }
 
-    bool checkFields(HttpResponse& response)
+    bool checkFields(const std::string& fields, HttpResponse& response)
     {
-        if (fields_.empty())
+        if (fields.empty())
         {
             response.error = true;
             response.curlCode = CURLE_COULDNT_CONNECT;
