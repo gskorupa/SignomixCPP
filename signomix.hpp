@@ -18,9 +18,11 @@ constexpr auto HTTP_UNAUTHORIZED = 403;
 namespace
 {
 
-constexpr auto _EMPTY = 0;
 constexpr auto _DEFALUT_CODE = 0;
-constexpr auto _POST_AUTH_URL = "https://signomix.com/api/auth/";
+constexpr auto _EMPTY = 0;
+constexpr auto _GET_DATA_PATH = "/api/iot/device/";
+constexpr auto _POST_AUTH_PATH = "/api/auth/";
+constexpr auto _POST_DATA_PATH = "/api/i4t";
 constexpr auto _RECONNECT_LIMIT = 3;
 
 size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp)
@@ -78,8 +80,7 @@ public:
                const std::string& eui, const std::string& secret)
         : login_(login)
         , password_(password)
-        , postUrl_("https://signomix.com/api/i4t")
-        , getUrl_("https://signomix.com/api/iot/device/")
+        , serviceUrl_("https://signomix.com")
         , eui_(eui)
         , secretKey_(secret)
     {
@@ -88,16 +89,14 @@ public:
 
     /*
      * This is a non-standard constructor.
-     * If you have your own instance of Signomix server with different endpoints.
+     * If you have your own instance of Signomix server with different service location.
      * than you should use this constructor
      */
-    HttpClient(const std::string& login, const std::string& password,
-               const std::string& postUrl, const std::string& getUrl,
+    HttpClient(const std::string& login, const std::string& password, const std::string& serviceUrl,
                const std::string& eui, const std::string& secret)
         : login_(login)
         , password_(password)
-        , postUrl_(postUrl)
-        , getUrl_(getUrl)
+        , serviceUrl_(serviceUrl)
         , eui_(eui)
         , secretKey_(secret)
     {
@@ -185,7 +184,8 @@ public:
         if (curl_)
         {
             curl_ = curl_easy_init();
-            curl_easy_setopt(curl_, CURLOPT_URL, postUrl_.c_str());
+            std::string postUrl{serviceUrl_ + _POST_DATA_PATH};
+            curl_easy_setopt(curl_, CURLOPT_URL, postUrl.c_str());
 
             struct curl_slist *headers = NULL;
             std::string authMess{"Authorization: " + secretKey_};
@@ -242,7 +242,7 @@ public:
         {
             curl_ = curl_easy_init();
 
-            std::string getUrlWithFields{getUrl_ + eui_ + '/' + fields + "?query=last%20" + std::to_string(recordsNumber)};
+            std::string getUrlWithFields{serviceUrl_ + _GET_DATA_PATH + eui_ + '/' + fields + "?query=last%20" + std::to_string(recordsNumber)};
             curl_easy_setopt(curl_, CURLOPT_URL, getUrlWithFields.c_str());
 
             struct curl_slist *headers = NULL;
@@ -296,7 +296,9 @@ private:
         if (curl_)
         {
             curl_ = curl_easy_init();
-            curl_easy_setopt(curl_, CURLOPT_URL, _POST_AUTH_URL);
+
+            std::string authUrl{serviceUrl_ + _POST_AUTH_PATH};
+            curl_easy_setopt(curl_, CURLOPT_URL, authUrl.c_str());
 
             struct curl_slist *headers = NULL;
             std::string authMess{"Authentication: Basic " + encodedCredentials};
@@ -368,8 +370,7 @@ private:
 
     std::string login_;
     std::string password_;
-    std::string postUrl_;
-    std::string getUrl_;
+    std::string serviceUrl_;
     std::string eui_;
     std::string secretKey_;
     std::string fields_;
