@@ -20,9 +20,9 @@ int main()
     std::cout << "Sending data via HTTP request POST" << std::endl;
 
     ledClient.newRequest();
-    ledClient.addPostField("led_green", 0.0);
-    ledClient.addPostField("led_red", 1);
-    ledClient.addPostField("led_yellow", 0.0f);
+    ledClient.addData("led_green", 0.0);
+    ledClient.addData("led_red", 1);
+    ledClient.addData("led_yellow", 0.0f);
 
     auto response = ledClient.sendData();
 
