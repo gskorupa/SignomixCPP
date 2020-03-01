@@ -163,7 +163,7 @@ public:
      * So this should be a primitive type.
      */
     template <typename ValueType>
-    void addDataField(const std::string& fieldName, const ValueType& value)
+    void addData(const std::string& fieldName, const ValueType& value)
     {
         fields_ += "&" + fieldName + "=" + std::to_string(value);
     }
