@@ -10,20 +10,18 @@
 namespace signomix
 {
 
-namespace
-{
-constexpr auto _EMPTY = 0;
-constexpr auto _DEFALUT_CODE = 0;
-constexpr auto _POST_AUTH_URL = "https://signomix.com/api/auth/";
-constexpr auto _RECONNECT_LIMIT = 3;
-}
-
 constexpr auto CURL_NO_ERROR = "No error";
 constexpr auto HTTP_OK = 200;
 constexpr auto HTTP_CREATED = 201;
 constexpr auto HTTP_UNAUTHORIZED = 403;
 
-using ByteData = std::vector<char>;
+namespace
+{
+
+constexpr auto _EMPTY = 0;
+constexpr auto _DEFALUT_CODE = 0;
+constexpr auto _POST_AUTH_URL = "https://signomix.com/api/auth/";
+constexpr auto _RECONNECT_LIMIT = 3;
 
 size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
@@ -44,24 +42,21 @@ size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp)
     return realsize;
 }
 
+} // namespace
+
 struct HttpResponse
 {
+    /*
+     * Structure for handling data from HTTP requests. Both POST and GET.
+     * Data are handled in 'data' memeber. For POST it is a plain text,
+     * but for GET it is a JSON format.
+     */
+
     bool error;
     int curlCode;
     int httpCode;
     std::string description;
     std::string data;
-
-    HttpResponse& operator=(const HttpResponse& other)
-    {
-        error = other.error;
-        curlCode = other.curlCode;
-        httpCode = other.httpCode;
-        description = other.description;
-        data = other.data;
-
-        return *this;
-    }
 };
 
 class HttpClient
@@ -126,24 +121,68 @@ public:
         secretKey_ = secret;
     }
 
+    /*
+     * IMPORTANT: This is the first function you must use after HttpClient object creation.
+     * 
+     * It creates you user session and automaticly recreated when it is needed.
+     * One invoke per object. It doesn't located in HttpClient constructor,
+     * because some needed objects are reachable only after constructor end.
+     */
+    bool createSession()
+    {
+        std::string credentials{login_ + ":" + password_ + "\n"};
+
+        constexpr int max_len{100};
+        base64::encoder encoder;
+        char encoded[max_len];
+
+        encoder.encode(credentials.c_str(), credentials.size(), encoded);
+        std::string encodedCredentials{encoded};
+
+        auto response = getSessionToken(encodedCredentials);
+        if (response.error)
+        {
+            return false;
+        }
+
+        sessionToken_ = response.data;
+        return true;
+    }
+
+    /*
+     * Adding a simngle POST field. As value you should treat every type which can be put into std::to_string function.
+     * So this should be a primitive type.
+     */
     template <typename ValueType>
     void addPostField(const std::string& fieldName, const ValueType& value)
     {
         fields_ += "&" + fieldName + "=" + std::to_string(value);
     }
 
+    /*
+     * Adding a GET fields. Put fileds as one string with fileds separeted with comas. No whitespaces!
+     * example: addGetFields("temperature,humidity")
+     */
     void addGetFields(const std::string& fields)
     {
         fields_.clear();
         fields_ += fields + "?query=last%20";
     }
 
+    /*
+     * IMPORTANT: Use this function after each single request you send.
+     */
     void clearRequest()
     {
         fields_.clear();
         faliedAuthCounter = 0;
     }
 
+    /*
+     * Function for sending POST request to update or create your device data on Signomix platform.
+     * 
+     * IMPORTANT: Remeber that post fields must be filled before.
+     */
     HttpResponse sendPost()
     {
         HttpResponse response{false, _DEFALUT_CODE, _DEFALUT_CODE, "", {}};
@@ -191,7 +230,15 @@ public:
         return response;
     }
 
-    HttpResponse sendGet(int recordsNumber)
+
+    /*
+     * Function for sending GET request to get your device data from Signomix platform.
+     * If you are interested in more number of last records of data, put number as a function parameter.
+     * It is 1 by default.
+     * 
+     * IMPORTANT: Remeber that get fields must be filled before.
+     */
+    HttpResponse sendGet(int recordsNumber = 1)
     {
         HttpResponse response{false, _DEFALUT_CODE, _DEFALUT_CODE, "", {}};
 
@@ -250,26 +297,6 @@ public:
         return response;
     }
 
-    bool createSession()
-    {
-        std::string credentials{login_ + ":" + password_ + "\n"};
-
-        constexpr int max_len{100};
-        base64::encoder encoder;
-        char encoded[max_len];
-
-        encoder.encode(credentials.c_str(), credentials.size(), encoded);
-        std::string encodedCredentials{encoded};
-
-        auto response = getSessionToken(encodedCredentials);
-        if (response.error)
-        {
-            return false;
-        }
-
-        sessionToken_ = response.data;
-        return true;
-    }
 private:
     HttpResponse getSessionToken(const std::string& encodedCredentials)
     {
@@ -317,7 +344,7 @@ private:
         {
             response.error = true;
             response.curlCode = CURLE_COULDNT_CONNECT;
-            response.description = "Empty fileds! GET request has not been sent.";
+            response.description = "Empty fileds! Request has not been sent.";
             return false;
         }
 

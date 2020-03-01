@@ -45,7 +45,7 @@ int main()
 
     ledClient.addGetFields("led_green,led_red,led_yellow");
 
-    response = ledClient.sendGet(1);
+    response = ledClient.sendGet();
 
     std::cout << "Response curl code: " << response.curlCode << std::endl;
     std::cout << "Response curl code description: " << response.description << std::endl;
