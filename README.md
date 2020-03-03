@@ -37,7 +37,7 @@ After that you can start operating with the data.
 
 #### Sending data
 Each request must be started with `newRequest()` function. It ensures that every earlier data fields and dependencies are cleared.
-After that add your data fields and send the request. Field name is a string type, but field's value, can be number or text type ().
+After that add your data fields and send the request. Field name is a string type, but field's value, can be number or text type.
 ```c++
 client.newRequest();
 
@@ -62,3 +62,4 @@ client.newRequest();
 response = client.getData("temperature,humidity", 5);
 
 ```
+In `response.data` you will have a string in JSON format. Operating on JSON objects is not implemented in this library, beacuse it is not the purpose of this project.
