@@ -3,7 +3,7 @@ Signomix client C++ library for connect your device with https://signomix.com/ v
 
 The target are embedded devices with Linux operating system, such as Raspberry Pi or Beaglebone board. 
 
-### Installation of libcurl and libb64
+### Installation of dependencies
 For Linux
 ```bash
 sudo apt-get install libcurl4-gnutls-dev
@@ -13,7 +13,7 @@ sudo apt-get install libb64-dev
 ### Building and running the example
 ```bash
 make
-./signomixcpp
+./example
 ```
 
 ### Usage
