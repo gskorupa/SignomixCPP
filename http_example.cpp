@@ -4,14 +4,15 @@
 
 int main()
 {
-    signomix::HttpClient ledClient("signomixcpp-test", "Test0000!", "0000-0000-0000", "34d97xxx00112");
+    signomix::HttpClient ledClient("mylogin", "mypassword", "https://signomix.com","myDeviceEUI", "deviceKey");
 
     auto sessionResponse = ledClient.createSession();
     std::cout << std::boolalpha << "Starting session = " << !sessionResponse.error << std::endl;
 
     if (sessionResponse.error)
     {
-        std::cerr << "Exiting with failure." << std::endl;
+        std::cout << "Exiting with code: " << sessionResponse.httpCode << std::endl;
+        std::cout << "Response description: " << sessionResponse.data << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -20,9 +21,8 @@ int main()
     std::cout << "Sending data via HTTP request POST" << std::endl;
 
     ledClient.newRequest();
-    ledClient.addData("led_green", 0.0);
-    ledClient.addData("led_red", 1);
-    ledClient.addData("led_yellow", 0.0f);
+    ledClient.addData("temperature", 12.5);
+    ledClient.addData("humidity", 30);
 
     auto response = ledClient.sendData();
 
@@ -45,7 +45,7 @@ int main()
     std::cout << "Sending HTTP request GET" << std::endl;
 
     ledClient.newRequest();
-    response = ledClient.getData("led_green,led_red,led_yellow");
+    response = ledClient.getData("temperature,humidity");
 
     std::cout << "Response HTTP code: " << response.httpCode << std::endl;
     std::cout << "Response curl code description: " << response.description << std::endl;
