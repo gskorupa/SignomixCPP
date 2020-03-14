@@ -4,8 +4,8 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 
-#include <algorithm>
 #include <string>
+#include <type_traits>
 
 namespace signomix
 {
@@ -127,7 +127,7 @@ public:
      * One invoke per object. It doesn't located in HttpClient constructor,
      * because some needed objects are reachable only after constructor end.
      */
-    bool createSession()
+    HttpResponse createSession()
     {
         std::string credentials{login_ + ":" + password_ + "\n"};
 
@@ -139,13 +139,8 @@ public:
         std::string encodedCredentials{encoded};
 
         auto response = getSessionToken(encodedCredentials);
-        if (response.error)
-        {
-            return false;
-        }
-
         sessionToken_ = response.data;
-        return true;
+        return response;
     }
 
     /*
@@ -158,11 +153,11 @@ public:
     }
 
     /*
-     * Adding a simngle POST field. As value you should treat every type which can be put into std::to_string function.
-     * So this should be a primitive type.
+     * Adding a simngle POST field. As value you should treat every primitive numeric type which can be put into std::to_string function.
+     * It will be checked at compile time, so bad type won't compile.
      */
-    template <typename ValueType>
-    void addData(const std::string& fieldName, const ValueType& value)
+    template <class ValueType, typename std::enable_if<std::is_arithmetic<ValueType>::value, ValueType>::type* = nullptr>
+    void addData(const std::string& fieldName, ValueType value)
     {
         fields_ += "&" + fieldName + "=" + std::to_string(value);
     }

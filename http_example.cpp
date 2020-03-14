@@ -6,10 +6,10 @@ int main()
 {
     signomix::HttpClient ledClient("signomixcpp-test", "Test0000!", "0000-0000-0000", "34d97xxx00112");
 
-    bool isSessionCreated = ledClient.createSession();
-    std::cout << std::boolalpha << "Starting session = " << isSessionCreated << std::endl;
+    auto sessionResponse = ledClient.createSession();
+    std::cout << std::boolalpha << "Starting session = " << !sessionResponse.error << std::endl;
 
-    if (not isSessionCreated)
+    if (sessionResponse.error)
     {
         std::cerr << "Exiting with failure." << std::endl;
         return EXIT_FAILURE;
