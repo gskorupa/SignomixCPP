@@ -6,7 +6,7 @@ The only dependency are libcurl and libb64, so you must install it on your devic
 The target are embedded devices with Linux operating system, such as Raspberry Pi or Beaglebone board. 
 
 ### Installation of dependencies
-For Linux (Ubuntu based didtros)
+For Linux (Ubuntu based distros)
 ```bash
 sudo apt-get install libcurl4-gnutls-dev
 sudo apt-get install libb64-dev
@@ -30,16 +30,19 @@ If you are working with your own instance of Signomix located for example on loc
 ```c++
 signomix::HttpClient client("login", "password", "your-signomix-url", "device-eui", "device-secret");
 ```
-Your HTTP client is alomst ready to start communication with Signomix platform.
-Last thing you must do is to create a user session and check if it started successfully.
+Your HTTP client is alomst ready to start communication with Signomix platform. Last thing you must do is to create a user session and check if it started successfully.The result is `HttpResponse` type and it is more described in "Sending data" section. For this moment, try to check only whether error occurs. If it exists, you can get more information from `HttpResponse` type.
 ```c++
-bool session = client.createSession();
+auto sessionResponse = client.createSession();
+if (sessionResponse.error)
+{
+    // do something
+}
 ```
 After that you can start operating with the data.
 
 #### Sending data
 Each request must be started with `newRequest()` function. It ensures that every earlier data fields and dependencies are cleared.
-After that add your data fields and send the request. Field name is a string type, but field's value, can be number or text type.
+After that add your data fields and send the request. Field name is a string type, but field's value can be only numeric type and it will be checked at compile time.
 ```c++
 client.newRequest();
 
@@ -53,7 +56,7 @@ if (response.error)
     std::cout << "Error: " << response.description << std::endl;
 }
 ```
-From `Response` type you can get values: error, description, data, curlCode and httpCode. In simple case only check if error exists. `response.description` is filled when error appears. If no error, than request has been succesfully sent. When you set that response to provide you some data, they will be available under `response.data` variable. Which is representation of `std::string`. Full usage of response you can see in example **http_example.cpp**.
+From `HttpResponse` type you can get values: error, description, data, curlCode and httpCode. In simple case only check if error exists. `response.description` is filled when error appears. If no error, than request has been succesfully sent. When you set that response to provide you some data, they will be available under `response.data` variable. Which is representation of `std::string`. Full usage of response you can see in example **http_example.cpp**.
 
 #### Getting data
 Getting data is more simple, because it is only one method. Fields are passed into the function as a text and they must be separated by comas, without whitespaces.

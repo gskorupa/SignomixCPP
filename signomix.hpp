@@ -20,6 +20,7 @@ namespace
 
 constexpr auto _DEFALUT_CODE = 0;
 constexpr auto _EMPTY = 0;
+constexpr auto _SERVICE_PATH = "https://signomix.com";
 constexpr auto _GET_DATA_PATH = "/api/iot/device/";
 constexpr auto _POST_AUTH_PATH = "/api/auth/";
 constexpr auto _POST_DATA_PATH = "/api/i4t";
@@ -80,7 +81,7 @@ public:
                const std::string& eui, const std::string& secret)
         : login_(login)
         , password_(password)
-        , serviceUrl_("https://signomix.com")
+        , serviceUrl_(_SERVICE_PATH)
         , eui_(eui)
         , secretKey_(secret)
     {
