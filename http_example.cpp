@@ -13,6 +13,7 @@ int main()
     {
         std::cout << "Failure code: " << sessionResponse.httpCode << std::endl;
         std::cout << "Response description: " << sessionResponse.description << std::endl;
+        std::cout << "Response data received: " << sessionResponse.data << std::endl;
         return EXIT_FAILURE;
     }
 
