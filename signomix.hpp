@@ -47,6 +47,20 @@ size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp)
 
 } // namespace
 
+CURL* initializeCurl()
+{
+    /*
+     * CURL object initialization (NOT THREAD SAFE!)
+     * Helper function for multi-thread applications.
+     */
+
+    CURL* curl;
+    curl_global_init(CURL_GLOBAL_ALL);
+    /* Ingnoring "curl uninitialized" warning for GCC. CURL object is initialized by above function.*/
+#pragma GCC diagnostic ignored "-Wuninitialized"
+    return curl;
+}
+
 struct HttpResponse
 {
     /*
@@ -66,42 +80,59 @@ class HttpClient
 {
 public:
     /*
-     * Default non-argument constructor has been deleted.
-     * For proper usage please use one of two defined constructors.
+     * This is default non-argument constructor.
+     * If your application is single-thread use it.
      */
-    HttpClient() = delete;
-
-    /*
-     * This is a standard constructor.
-     * Conventoion is a one HttpClient per device, so you must pass your account and device credentials into it.
-     * Of course you can simple switch accounts and devices inside object.
-     * If you want do this, use functions like changeAccount() or change Device()
-     */
-    HttpClient(const std::string& login, const std::string& password,
-               const std::string& eui, const std::string& secret)
-        : login_(login)
-        , password_(password)
-        , serviceUrl_(_SERVICE_PATH)
-        , eui_(eui)
-        , secretKey_(secret)
+    HttpClient()
     {
         curl_global_init(CURL_GLOBAL_ALL);
     }
 
     /*
-     * This is a non-standard constructor.
-     * If you have your own instance of Signomix server with different service location.
-     * than you should use this constructor
+     * This is recommended for muliti-thread applications
+     * CURL object initialization is not thread safe, so you must invoke
+     * initializeCurl() function before you start any thread
+     * Proposed usage:
+     * HttpClient client(initializeCurl());
      */
-    HttpClient(const std::string& login, const std::string& password, const std::string& serviceUrl,
-               const std::string& eui, const std::string& secret)
-        : login_(login)
-        , password_(password)
-        , serviceUrl_(serviceUrl)
-        , eui_(eui)
-        , secretKey_(secret)
+    HttpClient(CURL* curl)
+    : curl_(curl)
     {
-        curl_global_init(CURL_GLOBAL_ALL);
+    }
+
+    /*
+     * This is signIn function.
+     * Conventoion is a one HttpClient per device, so you must pass your account and device credentials into it.
+     * Of course you can simple switch accounts and devices inside object.
+     * If you want do this, use functions like changeAccount() or change Device()
+     */
+    HttpResponse signIn(const std::string& login, const std::string& password,
+               const std::string& eui, const std::string& secret)
+    {
+        login_ = login;
+        password_= password;
+        serviceUrl_= _SERVICE_PATH;
+        eui_= eui;
+        secretKey_= secret;
+
+        return createSession();
+    }
+
+    /*
+     * This is a non-standard signIn function..
+     * If you have your own instance of Signomix server with different service location,
+     * than you should use this version
+     */
+    HttpResponse signIn(const std::string& login, const std::string& password, const std::string& serviceUrl,
+               const std::string& eui, const std::string& secret)
+    {
+        login_ = login;
+        password_= password;
+        serviceUrl_= serviceUrl;
+        eui_= eui;
+        secretKey_= secret;
+
+        return createSession();
     }
 
     ~HttpClient()
@@ -210,7 +241,7 @@ public:
         {
             response.error = true;
             response.curlCode = CURLE_COULDNT_CONNECT;
-            response.description = "No connection!";
+            response.description = "No connection or some CURL library internal issue!";
         }
 
         return response;
@@ -261,7 +292,7 @@ public:
         {
             response.error = true;
             response.curlCode = CURLE_COULDNT_CONNECT;
-            response.description = "No connection!";
+            response.description = "No connection or some CURL library internal issue!";
         }
 
         if (response.httpCode == HTTP_UNAUTHORIZED)
@@ -316,6 +347,12 @@ private:
 
             curl_easy_cleanup(curl_);
             curl_slist_free_all(headers);
+        }
+        else
+        {
+            response.error = true;
+            response.curlCode = CURLE_COULDNT_CONNECT;
+            response.description = "No connection or some CURL library internal issue!";
         }
 
         return response;

@@ -4,7 +4,8 @@
 
 int main()
 {
-    signomix::HttpClient deviceClient("myLogin", "myPassword", "myDeviceEUI", "myDeviceKey");
+    signomix::HttpClient deviceClient;
+    deviceClient.signIn("myLogin", "myPassword", "myDeviceEUI", "myDeviceKey");
 
     auto sessionResponse = deviceClient.createSession();
     std::cout << std::boolalpha << "Starting session = " << !sessionResponse.error << std::endl;

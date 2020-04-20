@@ -1,5 +1,5 @@
 TARGET = example
-LIBS = -lcurl -lb64
+LIBS = -lcurl -lb64 -pthread
 CC = g++
 CFLAGS = -g -Wall
 

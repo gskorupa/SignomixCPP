@@ -49,7 +49,7 @@ client.newRequest();
 client.addData("temperature", 12.5);
 client.addData("some_sensor", 0.0f);
 
-signomix::Response response = client.sendData();
+signomix::HttpResponse response = client.sendData();
 
 if (response.error)
 {
