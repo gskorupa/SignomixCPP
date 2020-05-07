@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "signomix.hpp"
+#include "../../signomix.hpp"
 
 int main()
 {

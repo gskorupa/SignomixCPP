@@ -1,5 +1,5 @@
-TARGET = example
-LIBS = -lcurl -lb64 -pthread
+TARGET = http_example
+LIBS = -lcurl -lb64
 CC = g++
 CFLAGS = -g -Wall
 

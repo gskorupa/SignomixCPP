@@ -1,6 +1,5 @@
-example
-http_example.o
-response.txt
-signomixcpp
+examples/http_example/http_example.o
+examples/http_example/http_example
+examples/thread_example/thread_example.o
+examples/thread_example/thread_example
 .vscode/
-tags

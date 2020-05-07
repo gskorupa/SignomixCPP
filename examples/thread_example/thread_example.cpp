@@ -4,7 +4,7 @@
 #include <memory>
 #include <mutex>
 
-#include "signomix.hpp"
+#include "../../signomix.hpp"
 
 std::mutex globalMutex;
 
