@@ -12,27 +12,38 @@ sudo apt-get install libcurl4-gnutls-dev
 sudo apt-get install libb64-dev
 ```
 
-### Building and running the example
+### Building and running the examples
 ```bash
-make
-./example
+cd examples/http_example && make
+cd ../thread_example && make
 ```
+Now you can go to the directory, which you are interested in and run an executable.
 
 ### Usage
-First step is creation of `HttpClient`. You must push to constructor four string values. Your account credentials, devce EUI number and your device secret key. These are values which you set on your account in Signomix platform. So the concept is: one HttpClient for each device. But you can change device, also in single client. You can even switch account, but this is a rather rare case.
+This is header-only library, so copy `signomix.hpp` into your working dir.
+First step is creation of `HttpClient`. If you are developing single-thread application use standard default constructor.
+For multi-thread apps see the example. Next you have to invoke a `signIn()` function and push there four string values.
+Your account credentials, devce EUI number and your device secret key. These are values which you set on your account in Signomix platform. So the concept is: one HttpClient for each device. But you can change device, also in single client.
+You can even switch account, but this is a rather rare case.
+
 ```c++
-signomix::HttpClient client("login", "password", "device-eui", "device-secret");
+#include "signomix.hpp"
+
+...
+
+signomix::HttpClient client();
+signomix::HttpResponse response = client.signIn("login", "password", "device-eui", "device-secret");
 
 client.changeDevice("next-device-eui", "next-device-secret");
 client.changeAccount("next-login", "next-password");
 ```
-If you are working with your own instance of Signomix located for example on localhost or somewhere else you need to use different constructor
+If you are working with your own instance of Signomix located for example on localhost or somewhere else you need to pass one parameter more - your signomix url
 ```c++
-signomix::HttpClient client("login", "password", "your-signomix-url", "device-eui", "device-secret");
+client.signIn("login", "password", "your-signomix-url", "device-eui", "device-secret");
 ```
-Your HTTP client is alomst ready to start communication with Signomix platform. Last thing you must do is to create a user session and check if it started successfully.The result is `HttpResponse` type and it is more described in "Sending data" section. For this moment, try to check only whether error occurs. If it exists, you can get more information from `HttpResponse` type.
+Your HTTP client is alomst ready to start communication with Signomix platform. Last thing you must do is to check if user session started successfully.The result is `HttpResponse` type and it is more described in "Sending data" section. For this moment, try to check only whether error occurs. If it exists, you can get more information from `HttpResponse` type.
 ```c++
-auto sessionResponse = client.createSession();
+auto sessionResponse = client.signIn("login", "password", "device-eui", "device-secret");
 if (sessionResponse.error)
 {
     // do something

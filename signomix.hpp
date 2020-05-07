@@ -140,6 +140,11 @@ public:
         curl_global_cleanup();
     }
 
+    /*
+     * Functions below allows you to switch account or used device.
+     * After changing the account you must signIn() again.
+     */
+
     void changeAccount(const std::string& login, const std::string& password)
     {
         login_ = login;
@@ -150,29 +155,6 @@ public:
     {
         eui_ = eui;
         secretKey_ = secret;
-    }
-
-    /*
-     * IMPORTANT: This is the first function you must use after HttpClient object creation.
-     * 
-     * It creates you user session and automaticly recreated when it is needed.
-     * One invoke per object. It doesn't located in HttpClient constructor,
-     * because some needed objects are reachable only after constructor end.
-     */
-    HttpResponse createSession()
-    {
-        std::string credentials{login_ + ":" + password_ + "\n"};
-
-        constexpr int max_len{100};
-        base64::encoder encoder;
-        char encoded[max_len];
-
-        encoder.encode(credentials.c_str(), credentials.size(), encoded);
-        std::string encodedCredentials{encoded};
-
-        auto response = getSessionToken(encodedCredentials);
-        sessionToken_ = response.data;
-        return response;
     }
 
     /*
@@ -316,6 +298,30 @@ public:
     }
 
 private:
+    /*
+     * This is the first function that must be run at the begining of HttpClient usage.
+     * This is automaticly invoked by signIn() function
+     * 
+     * It creates you user session and automaticly recreated when it is needed.
+     * One invoke per object. It doesn't located in HttpClient constructor,
+     * because some needed objects are reachable only after constructor end.
+     */
+    HttpResponse createSession()
+    {
+        std::string credentials{login_ + ":" + password_ + "\n"};
+
+        constexpr int max_len{100};
+        base64::encoder encoder;
+        char encoded[max_len];
+
+        encoder.encode(credentials.c_str(), credentials.size(), encoded);
+        std::string encodedCredentials{encoded};
+
+        auto response = getSessionToken(encodedCredentials);
+        sessionToken_ = response.data;
+        return response;
+    }
+
     HttpResponse getSessionToken(const std::string& encodedCredentials)
     {
         HttpResponse response{false, _DEFALUT_CODE, _DEFALUT_CODE, "", {}};
