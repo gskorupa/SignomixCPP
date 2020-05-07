@@ -17,12 +17,12 @@ sudo apt-get install libb64-dev
 cd examples/http_example && make
 cd ../thread_example && make
 ```
-Now you can go to the directory, which you are interested in and run an executable.
+Now you can go to the directory which you are interested in and run an executable.
 
 ### Usage
 This is header-only library, so copy `signomix.hpp` into your working dir.
 First step is creation of `HttpClient`. If you are developing single-thread application use standard default constructor.
-For multi-thread apps see the example. Next you have to invoke a `signIn()` function and push there four string values.
+**For multi-thread apps see the example**. Next you have to invoke a `signIn()` function and push there four string values.
 Your account credentials, devce EUI number and your device secret key. These are values which you set on your account in Signomix platform. So the concept is: one HttpClient for each device. But you can change device, also in single client.
 You can even switch account, but this is a rather rare case.
 
@@ -31,7 +31,7 @@ You can even switch account, but this is a rather rare case.
 
 ...
 
-signomix::HttpClient client();
+signomix::HttpClient client;
 signomix::HttpResponse response = client.signIn("login", "password", "device-eui", "device-secret");
 
 client.changeDevice("next-device-eui", "next-device-secret");
