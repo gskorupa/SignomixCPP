@@ -78,3 +78,9 @@ response = client.getData("temperature,humidity", 5);
 
 ```
 In `response.data` you will have a string in JSON format. Operating on JSON objects is not implemented in this library, beacuse it is not the purpose of this project.
+
+#### SSL verfication
+SSL verification is disabled by default. If you want to verify Signomix certificate you must use this function once.
+```c++
+client.setSSLverificationEnabled("path/to/cert");
+```

@@ -26,7 +26,7 @@ constexpr auto _POST_AUTH_PATH = "/api/auth/";
 constexpr auto _POST_DATA_PATH = "/api/i4t";
 constexpr auto _RECONNECT_LIMIT = 3;
 
-size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp)
+static size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
     size_t realsize = size * nmemb;
     if (not contents or not userp)
@@ -47,7 +47,7 @@ size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp)
 
 } // namespace
 
-CURL* initializeCurl()
+static CURL* initializeCurl()
 {
     /*
      * CURL object initialization (NOT THREAD SAFE!)
@@ -144,7 +144,6 @@ public:
      * Functions below allows you to switch account or used device.
      * After changing the account you must signIn() again.
      */
-
     void changeAccount(const std::string& login, const std::string& password)
     {
         login_ = login;
@@ -155,6 +154,15 @@ public:
     {
         eui_ = eui;
         secretKey_ = secret;
+    }
+
+    /*
+     * If you want to verify Signomix certificate, use this function with path to your Bundle of CA Root Certificates.
+     * You can download it for example from cURL: https://curl.haxx.se/docs/caextract.html
+     */
+    void setSSLverificationEnabled(const std::string& cacert)
+    {
+        cacert_ = cacert;
     }
 
     /*
@@ -178,7 +186,7 @@ public:
 
     /*
      * Function for sending POST request to update or create your device data on Signomix platform.
-     * 
+     *
      * IMPORTANT: Remeber that post fields must be filled before.
      */
     HttpResponse sendData()
@@ -205,6 +213,18 @@ public:
             curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, headers);
 
             std::string message = "eui=" + eui_ + fields_;
+
+            if (cacert_.empty())
+            {
+                curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYPEER, 0L);
+                curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYHOST, 0L);
+            }
+            else
+            {
+                curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYPEER, 1L);
+                curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYHOST, 2L);
+                curl_easy_setopt(curl_, CURLOPT_CAINFO, cacert_.c_str());
+            }
 
             curl_easy_setopt(curl_, CURLOPT_POST, 1);
             curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, message.c_str());
@@ -301,7 +321,7 @@ private:
     /*
      * This is the first function that must be run at the begining of HttpClient usage.
      * This is automaticly invoked by signIn() function
-     * 
+     *
      * It creates you user session and automaticly recreated when it is needed.
      * One invoke per object. It doesn't located in HttpClient constructor,
      * because some needed objects are reachable only after constructor end.
@@ -343,9 +363,22 @@ private:
             setCallback(response);
 
             // Setting empty POST fields for authentication
+
             curl_easy_setopt(curl_, CURLOPT_POST, 1);
             curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, "");
             curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, static_cast<long>(_EMPTY));
+
+            if (cacert_.empty())
+            {
+                curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYPEER, 0L);
+                curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYHOST, 0L);
+            }
+            else
+            {
+                curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYPEER, 1L);
+                curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYHOST, 2L);
+                curl_easy_setopt(curl_, CURLOPT_CAINFO, cacert_.c_str());
+            }
 
             curlCode_ = curl_easy_perform(curl_);
 
@@ -393,7 +426,7 @@ private:
             response.curlCode = curlCode_;
         }
         response.description = curl_easy_strerror(curlCode_);
-    
+
         if (response.error and response.description == CURL_NO_ERROR)
         {
             response.description = "HTTP error " + std::to_string(response.httpCode);
@@ -414,6 +447,7 @@ private:
     std::string secretKey_;
     std::string fields_;
     std::string sessionToken_;
+    std::string cacert_;
 
     int faliedAuthCounter{0};
 };
