@@ -26,7 +26,7 @@ constexpr auto _POST_AUTH_PATH = "/api/auth/";
 constexpr auto _POST_DATA_PATH = "/api/i4t";
 constexpr auto _RECONNECT_LIMIT = 3;
 
-size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp)
+inline size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
     size_t realsize = size * nmemb;
     if (not contents or not userp)
@@ -47,7 +47,7 @@ size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp)
 
 } // namespace
 
-CURL* initializeCurl()
+inline CURL* initializeCurl()
 {
     /*
      * CURL object initialization (NOT THREAD SAFE!)
